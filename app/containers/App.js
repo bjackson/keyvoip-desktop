@@ -12,8 +12,6 @@ import Anchor from 'grommet/components/Anchor';
 import Menu from 'grommet/components/Menu';
 
 
-
-
 export default class App extends Component {
   props: {
     children: Children

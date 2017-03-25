@@ -11,13 +11,9 @@ export default {
     rules: [
       {
         test: /\.jsx?$/,
-        use: 'babel-loader',
+        use: ['shebang-loader', 'babel-loader'],
         exclude: /node_modules/
       },
-      // {
-      //   test: /\.scss$/,
-      //   loader: 'style!css!sass?outputStyle=compressed'
-      // },
     ],
   },
 
