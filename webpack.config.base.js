@@ -8,11 +8,17 @@ import { dependencies as externals } from './app/package.json';
 
 export default {
   module: {
-    rules: [{
-      test: /\.jsx?$/,
-      use: 'babel-loader',
-      exclude: /node_modules/
-    }]
+    rules: [
+      {
+        test: /\.jsx?$/,
+        use: 'babel-loader',
+        exclude: /node_modules/
+      },
+      // {
+      //   test: /\.scss$/,
+      //   loader: 'style!css!sass?outputStyle=compressed'
+      // },
+    ],
   },
 
   output: {
@@ -26,7 +32,7 @@ export default {
    * Determine the array of extensions that should be used to resolve modules.
    */
   resolve: {
-    extensions: ['.js', '.jsx', '.json'],
+    extensions: ['.js', '.jsx', '.json',],
     modules: [
       path.join(__dirname, 'app'),
       'node_modules',

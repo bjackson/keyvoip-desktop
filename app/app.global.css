@@ -1,6 +1,7 @@
 @import "~font-awesome/css/font-awesome.css";
+@import "~grommet/grommet.min.css"
 
-body {
+/*body {
   position: relative;
   color: white;
   height: 100vh;
@@ -36,4 +37,4 @@ a:hover {
   opacity: 1;
   text-decoration: none;
   cursor: pointer;
-}
+}*/
