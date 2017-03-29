@@ -68,33 +68,38 @@ async function decryptString(key, data) {
 async function createTestNodeOnPort(id) {
   const logger = new kad.Logger(1);
   const contact = kad.contacts.AddressPortContact({
-    address: '127.0.0.1',
+    // address: '127.0.0.1',
+    address: '173.18.28.216',
     port: id + PORT,
   });
   // Decorate your transport
-  // const NatTransport = traverse.TransportDecorator(kad.transports.UDP);
-  //
-  // // Create your transport with options
-  // const transport = new NatTransport(contact, {
-  //   traverse: {
-  //     upnp: { port: PORT + id, ttl: 0 },
-  //     stun: {
-  //       address: 'stun.l.google.com',
-  //       port: 19302,
-  //     },
-  //    turn: {
-  //      server: {
-  //        address: '192.158.29.39', port: 3478
-  //      }
-  //    }
-  //   }
-  // });
+  const NatTransport = traverse.TransportDecorator(kad.transports.UDP);
 
+  const transport = new NatTransport(contact, {
+    traverse: {
+      upnp: { forward: PORT + id, ttl: 0 },
+      stun: {
+        server: {
+          address: 'stun.l.google.com',
+          port: 19302,
+        }
+      },
+     turn: {
+       server: {
+         address: '192.158.29.39', port: 3478
+       }
+     }
+    }
+  });
+
+  // const transport = kad.transports.UDP(contact);
+
+  const storage = kad.storage.MemStore();
 
   var node = new kad.Node({
     logger,
-    transport: kad.transports.UDP(contact),
-    storage: kad.storage.MemStore(),
+    transport,
+    storage,
   });
 
 
@@ -130,20 +135,31 @@ class StatusPage extends Component {
 
 
     for (var i = 1; i < NUM_NODES; i++) {
-      let seed = {
+      let seed2 = {
           address: '127.0.0.1',
           port: PORT + ((i + 1) % NUM_NODES),
       };
-      // let seed = {
-      //     address: 'brettjackson.org',
-      //     port: PORT,
-      // };
+      let seed = {
+          address: 'brettjackson.org',
+          port: PORT,
+      };
 
 
-      nodes[i].connect(seed, err => console.err);
+      // nodes[i].connect(seed, err => console.err);
+      nodes[i].connect(seed2, err => console.err);
 
       await sleep(500);
     }
+
+    // nodes[1].connect({
+    //   address: '127.0.0.1',
+    //   port: 42001 + 6
+    // });
+    //
+    // nodes[6].connect({
+    //   address: '127.0.0.1',
+    //   port: 42001 + 1
+    // });
 
     // setTimeout(async function () {
     //   console.log('TIMEOUT 1');
@@ -167,7 +183,7 @@ class StatusPage extends Component {
     // }, 1000);
 
 
-
+    await sleep(2500);
     navigator.getUserMedia({ video: true, audio: true }, (stream) => this.gotMedia(stream, topics), function () {})
   }
 
@@ -179,43 +195,92 @@ class StatusPage extends Component {
     let signal1 = true;
     let signal6 = true;
 
+    let seq1 = 0;
+    let seq6 = 0;
+    let last1 = -1;
+    let last6 = -1;
+
+    let peer1pkts = [];
+    let peer6pkts = [];
+
+
     this.topics[6].subscribe('node6RTC', async (data) => {
       console.log('GOT RTC MESSAGE 6');
-      // const decryptedString = await decryptString(privKey1File, data);
       console.log(data);
-      const dt = new Date(data.time);
-      console.warn((new Date() - dt) / 1000);
-      // if (signal6 && (((new Date() - dt) / 1000) < 5)) {
-        signal6 = false;
+
+      if (data.seq == last6 + 1) {
+        _.forEach(peer6pkts, pkt => {
+          if (pkt.seq == last6 + 1) {
+            console.log(`PEER 6: Processing pkt: ${pkt.seq}`);
+            peer6.signal(pkt.data);
+            last6 = pkt.seq;
+          }
+        });
+        console.log(`PEER 6: Processing pkt: ${data.seq}`);
+        last6 = data.seq;
         peer6.signal(data.data);
-      // }
+      } else if (data.seq > last6 + 1) {
+        peer6pkts.push(data);
+        peer6pkts = _.sortBy(peer6pkts, n => n.seq);
+      }
     });
 
     this.topics[1].subscribe('node1RTC', async (data) => {
       console.log('GOT RTC MESSAGE 1');
-      // const decryptedString = await decryptString(privKey1File, data);
       console.log(data);
-      const dt = new Date(data.time);
-      console.warn((new Date() - dt) / 1000);
-      // if (signal1 && (((new Date() - dt) / 1000 < 5))) {
-        signal1 = false;
+
+      if (data.seq == last1 + 1) {
+        _.forEach(peer1pkts, pkt => {
+          if (pkt.seq == last1 + 1) {
+            console.log(`PEER 1: Processing pkt: ${pkt.seq}`);
+            peer1.signal(pkt.data);
+            last1 = pkt.seq;
+          }
+        });
+        console.log(`PEER 1: Processing pkt: ${data.seq}`);
+        last1 = data.seq;
         peer1.signal(data.data);
-      // }
+      } else if (data.seq > last1 + 1) {
+        peer1pkts.push(data);
+        peer1pkts = _.sortBy(peer1pkts, n => n.seq);
+      }
+
     });
 
     peer1.on('signal',  (data) => {
       // when peer1 has signaling data, give it to peer6 somehow
       setTimeout(function () {
-        topics[1].publish('node6RTC', { data: data, time: new Date().toJSON() });
-      }, 2000);
-    })
+        topics[1].publish('node6RTC', { data: data, time: new Date().toJSON(), seq: seq1 });
+        console.log('node6RTC', { data: data, time: new Date().toJSON(), seq: seq1 });
+
+        let curSeq1 = seq1;
+
+        setTimeout(function () {
+          topics[1].publish('node6RTC', { data: data, time: new Date().toJSON(), seq: curSeq1 });
+          console.log('node6RTC', { data: data, time: new Date().toJSON(), seq: curSeq1 });
+        }, 500);
+
+
+        seq1++;
+      }, 1000);
+    });
 
     peer6.on('signal',  (data) => {
       // when peer6 has signaling data, give it to peer1 somehow
       setTimeout(function () {
-        topics[6].publish('node1RTC', { data: data, time: new Date().toJSON() });
-      }, 2000);
-    })
+        topics[6].publish('node1RTC', { data: data, time: new Date().toJSON(), seq: seq6 });
+        console.log('node1RTC', { data: data, time: new Date().toJSON(), seq: seq6 });
+
+        let curSeq6 = seq6;
+
+        setTimeout(function () {
+          topics[6].publish('node1RTC', { data: data, time: new Date().toJSON(), seq: curSeq6 });
+          console.log('node1RTC', { data: data, time: new Date().toJSON(), seq: curSeq6 });
+        }, 500);
+
+        seq6++;
+      }, 1000);
+    });
 
     peer1.on('connect',  () => {
       // wait for 'connect' event before using the data channel
