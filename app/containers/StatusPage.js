@@ -19,27 +19,23 @@ import {
 } from '../keys/keys';
 import levelup from 'levelup';
 import SimplePeer from 'simple-peer';
+import List from 'grommet/components/List';
+import ListItem from 'grommet/components/ListItem';
+import Split from 'grommet/components/Split';
+import TextInput from 'grommet/components/TextInput';
+import Box from 'grommet/components/Box';
+import Title from 'grommet/components/Title';
+import Button from 'grommet/components/Button';
+
+
+
+
 const openpgp = require('openpgp');
 
 require('events').EventEmitter.defaultMaxListeners = 20;
 
 const PORT = 42001;
 const NUM_NODES = 7;
-
-// const NODE_IDs = [
-//   'f511e1445170b19d6f18a45bf434818856ac0a7f',
-//   '0edbdc3d4c2b868f5202aadb80ec8530e118de3c',
-//   '99b5bd247f0c9f77c7da86c4657628eccfacb9ca',
-//   'd9fb3035728f1e0fabe86133a745454a368d99ff',
-//   'e343560af0185062c239f616009ae013a3e80ba3',
-//   '5b3e6977f5d0588ae09c3ae5ce5291a8faa25e8c',
-//   'f3d02af52766cf6e7fc1ca435e94175f17210e30',
-//   '8afeca0b25ff71dca94b3e2c488934d7cd61489c',
-//   'c5e428f84be9c7015584b277c1762ce9a865fb7d',
-//   'd7d374339f0fd4aa8efbfdbd30b7072327c75f80',
-//   'b6c04ce63dfa6434cc9ef42a25e97f9fd0e23dc9',
-//   '9f4c1384bfbf609bd7373c6bf6626cf67e8cbb8d',
-// ];
 
 async function encryptString(key, data) {
   const options = {
@@ -61,12 +57,8 @@ async function decryptString(key, data) {
   return plaintext.data;
 }
 
-// for (var i = 0; i < 10; i++) {
-//   console.log(kad.utils.getRandomKeyString());
-// }
-
 async function createTestNodeOnPort(id) {
-  const logger = new kad.Logger(4);
+  const logger = new kad.Logger(1);
   let transport = kad.transports.UDP(kad.contacts.AddressPortContact({
     address: '127.0.0.1',
     port: id + PORT
@@ -82,7 +74,6 @@ async function createTestNodeOnPort(id) {
 
 
   console.log(node);
-  // await sleep(500);
   return node;
 }
 
@@ -93,11 +84,18 @@ function sleep(ms) {
 class StatusPage extends Component {
   constructor() {
     super();
+    this.start();
+
+    this.state = {
+      peer1Messages: [],
+      peer6Messages: [],
+      peer1Text: 'Hello from 1!',
+      peer6Text: 'Hello from 6!',
+    };
   }
 
   async start() {
     console.log('starting network');
-    // const nodes = await _.map(_.range(NUM_NODES), async (n) => { return await createTestNodeOnPort(n) });
     const nodes = [];
 
     for (let i = 0; i < NUM_NODES; i++) {
@@ -115,25 +113,18 @@ class StatusPage extends Component {
         address: 'localhost',
         port: PORT + ((i + 1) % NUM_NODES),
       };
-      // const seed = {
-      //   address: 'brettjackson.org',
-      //   port: PORT,
-      // };
 
-
-      // nodes[i].connect(seed, err => console.err);
       nodes[i].connect(seed2, console.err);
-
-      // await sleep(500);
     }
 
     setTimeout(() => {
-      navigator.getUserMedia({ video: true, audio: true },
-        (stream) => this.gotMedia(stream, topics), () => {});
-    }, 9000);
+      // navigator.getUserMedia({ },
+      //   (stream) => this.startPage(stream, topics), () => {});
+      this.startPage(topics);
+    }, 3000);
   }
 
-  gotMedia(stream, topics) {
+  startPage(topics) {
     let seq1 = 0;
     let seq6 = 0;
     let last1 = -1;
@@ -145,8 +136,16 @@ class StatusPage extends Component {
     let peer1;
     let peer6;
 
+    const peer1key = openpgp.key.readArmored(pubKey1File).keys[0];
+    const peer6key = openpgp.key.readArmored(pubKey2File).keys[0];
 
-    this.topics[6].subscribe('node6RTC', async (data) => {
+    const peer1Fingerprint = peer1key.primaryKey.fingerprint;
+    const peer6Fingerprint = peer6key.primaryKey.fingerprint;
+
+    console.log(peer1key);
+
+
+    this.topics[6].subscribe(peer6Fingerprint, async (data) => {
       console.log('GOT RTC MESSAGE 6');
       console.log(data);
 
@@ -167,7 +166,7 @@ class StatusPage extends Component {
       }
     });
 
-    this.topics[1].subscribe('node1RTC', async (data) => {
+    this.topics[1].subscribe(peer1Fingerprint, async (data) => {
       console.log('GOT RTC MESSAGE 1');
       console.log(data);
 
@@ -189,19 +188,23 @@ class StatusPage extends Component {
     });
 
     setTimeout(() => {
-      peer1 = new SimplePeer({ initiator: true, stream });
+      peer1 = new SimplePeer({ initiator: true });
       peer6 = new SimplePeer();
+
+      this.peer1 = peer1;
+      this.peer6 = peer6;
+
 
       peer1.on('signal', (data) => {
         // when peer1 has signaling data, give it to peer6 somehow
         setTimeout(() => {
-          topics[1].publish('node6RTC', { data, time: new Date().toJSON(), seq: seq1 });
+          topics[1].publish(peer6Fingerprint, { data, time: new Date().toJSON(), seq: seq1 });
           console.log('node6RTC', { data, time: new Date().toJSON(), seq: seq1 });
 
           const curSeq1 = seq1;
 
           setTimeout(() => {
-            topics[1].publish('node6RTC', { data, time: new Date().toJSON(), seq: curSeq1 });
+            topics[1].publish(peer6Fingerprint, { data, time: new Date().toJSON(), seq: curSeq1 });
             console.log('node6RTC', { data, time: new Date().toJSON(), seq: curSeq1 });
           }, 100);
 
@@ -213,13 +216,13 @@ class StatusPage extends Component {
       peer6.on('signal', (data) => {
         // when peer6 has signaling data, give it to peer1 somehow
         setTimeout(() => {
-          topics[6].publish('node1RTC', { data, time: new Date().toJSON(), seq: seq6 });
+          topics[6].publish(peer1Fingerprint, { data, time: new Date().toJSON(), seq: seq6 });
           console.log('node1RTC', { data, time: new Date().toJSON(), seq: seq6 });
 
           const curSeq6 = seq6;
 
           setTimeout(() => {
-            topics[6].publish('node1RTC', { data, time: new Date().toJSON(), seq: curSeq6 });
+            topics[6].publish(peer1Fingerprint, { data, time: new Date().toJSON(), seq: curSeq6 });
             console.log('node1RTC', { data, time: new Date().toJSON(), seq: curSeq6 });
           }, 100);
 
@@ -230,47 +233,112 @@ class StatusPage extends Component {
       peer1.on('connect', () => {
         // wait for 'connect' event before using the data channel
         console.log('peer1 connected');
+        // peer1.send(JSON.stringify({ message: 'hello1' }));
       });
 
       peer6.on('connect', () => {
         // wait for 'connect' event before using the data channel
         console.log('peer6 connected');
+        // peer6.send(JSON.stringify({ message: 'hello6' }));
       });
 
-      peer6.on('data', (data) => {
+      peer6.on('data', async (data) => {
         // got a data channel message
         console.log(`got a message from peer1: ${data}`);
+
+        const messageObj = JSON.parse(data.toString());
+
+        const decryptedMsg = await decryptString(privKey2File, messageObj.message);
+
+
+        this.setState({
+          peer6Messages: [...this.state.peer6Messages, decryptedMsg]
+        });
       });
 
-      peer6.on('stream', (stream2) => {
-        // got remote video stream, now let's show it in a video tag
-        const video = document.getElementById('videoPl');
-        video.src = window.URL.createObjectURL(stream2);
-        video.play();
+      peer1.on('data', async data => {
+        console.log(`got a message from peer6: ${data}`);
+
+        const messageObj = JSON.parse(data.toString());
+
+        const decryptedMsg = await decryptString(privKey1File, messageObj.message);
+
+
+        this.setState({
+          peer1Messages: [...this.state.peer1Messages, decryptedMsg]
+        });
       });
     }, 1000);
   }
 
+  async sendPeer1() {
+    const encryptedMessage = await encryptString(pubKey2File, this.state.peer1Text);
+
+
+    this.peer1.send(JSON.stringify({ message: encryptedMessage }));
+  }
+
+  async sendPeer6() {
+    const encryptedMessage = await encryptString(pubKey1File, this.state.peer6Text);
+
+
+    this.peer6.send(JSON.stringify({ message: encryptedMessage }));
+  }
+
+  onPeer1TextChange(e) {
+    this.setState({
+      peer1Text: e.target.value,
+    });
+  }
+
+  onPeer6TextChange(e) {
+    this.setState({
+      peer6Text: e.target.value,
+    });
+  }
+
+
   render() {
     return (
       <div>
-        <h3>hi</h3>
-        <button onClick={() => this.start()}>Start me up!</button>
-        <video id="videoPl" />
+        <Split>
+          <Box colorIndex='neutral-1'
+               justify='center'
+               align='center'
+               pad='medium'>
+            <Title>Peer1</Title>
+            <List>
+              {
+                this.state.peer1Messages.map((m, i) => (
+                  <ListItem key={i}>
+                    {m}
+                  </ListItem>))
+              }
+            </List>
+            <TextInput value={this.state.peer1Text} onDOMChange={(e) => this.onPeer1TextChange(e)} />
+            <Button onClick={() => this.sendPeer1()} label="Send" />
+          </Box>
+          <Box colorIndex='neutral-2'
+               justify='center'
+               align='center'
+               pad='medium'>
+            <Title>Peer6</Title>
+            <List>
+              {
+                this.state.peer6Messages.map((m, i) => (
+                  <ListItem key={i}>
+                    {m}
+                  </ListItem>))
+              }
+            </List>
+            <TextInput value={this.state.peer6Text} onDOMChange={(e) => this.onPeer6TextChange(e)} />
+            <Button onClick={() => this.sendPeer6()} label="Send" />
+          </Box>
+        </Split>
       </div>
     );
   }
 }
 
 
-function mapStateToProps(state) {
-  return {
-    status: state.Status
-  };
-}
-
-function mapDispatchToProps(dispatch) {
-  return bindActionCreators(StatusActions, dispatch);
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(StatusPage);
+export default (StatusPage);
