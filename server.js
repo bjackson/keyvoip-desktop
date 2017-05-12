@@ -2,8 +2,8 @@ const kad = require('kad');
 const quasar = require('kad-quasar');
 const traverse = require('kad-traverse');
 
-var logger = new kad.Logger(4);
-var contact = kad.contacts.AddressPortContact({
+const logger = new kad.Logger(4);
+const contact = kad.contacts.AddressPortContact({
   address: 'brettjackson.org',
   port: 42001
 });
@@ -23,10 +23,14 @@ const NatTransport = traverse.TransportDecorator(kad.transports.UDP);
 //     }
 // });
 
-var node = new kad.Node({
+const node = new kad.Node({
   logger,
   transport: kad.transports.UDP(contact),
   storage: kad.storage.MemStore(),
 });
 
 const topic = new quasar.Protocol(node._router);
+
+topic.subscribe('bootstrapRPC', data => console.log(data));
+
+node.put('connected-to-bootstrap', 'true', data => console.log);

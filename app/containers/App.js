@@ -22,10 +22,12 @@ export default class App extends Component {
       <GApp>
         <Split flex="right">
           <Sidebar>
-            <Menu direction='column' align='start' justify='between' size='small'
-                    primary={true}>
-              <Anchor path="/" label="Home"></Anchor>
-              <Anchor path="/status" label="Status"></Anchor>
+            <Menu
+              direction="column" align="start" justify="between" size="small"
+              primary
+            >
+              <Anchor path="/" label="Home" />
+              <Anchor path="/status" label="Status" />
             </Menu>
           </Sidebar>
           <Box>

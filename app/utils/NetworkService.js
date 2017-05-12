@@ -20,12 +20,12 @@ export async function decryptString(key, data) {
 
 export function createTestNodeOnPort(id) {
   // var logger = new kad.Logger(0);
-  var contact = {
+  const contact = {
     address: '127.0.0.1',
     port: id + PORT,
   };
 
-  var node = new kad.Node({
+  const node = new kad.Node({
     transport: kad.transports.UDP(kad.contacts.AddressPortContact(contact)),
     storage: levelup(`./node-${id}-storage.db`, { db: require('memdown') }),
   });

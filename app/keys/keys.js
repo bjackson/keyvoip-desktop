@@ -57,7 +57,7 @@ QYkExAbBT2NFNsw7qPquAIdOfW3kI5r8yEM6TS59CUkowzZW7PJYY5Q1DeGpvldW
 3ryMWABFaIghEMRTqgh0lHmBsxhFxG16tl47B0iwfdHyWdPyZJuVs3rrbAS65g==
 =6DFV
 -----END PGP PRIVATE KEY BLOCK-----
-`
+`;
 
 export const privKey2File = `-----BEGIN PGP PRIVATE KEY BLOCK-----
 Comment: GPGTools - https://gpgtools.org
@@ -118,7 +118,7 @@ HLrpRHE7gfhig2TXhuO712Evh+cqnwowbWrkK4AZgImOKqvV0S04tZNEqlYGBsIU
 EA==
 =KNcb
 -----END PGP PRIVATE KEY BLOCK-----
-`
+`;
 
 export const pubKey1File = `-----BEGIN PGP PUBLIC KEY BLOCK-----
 Comment: GPGTools - https://gpgtools.org
@@ -151,7 +151,7 @@ wU9jRTbMO6j6rgCHTn1t5COa/MhDOk0ufQlJKMM2VuzyWGOUNQ3hqb5XVutxWldq
 RWiIIRDEU6oIdJR5gbMYRcRterZeOwdIsH3R8lnT8mSblbN662wEuuY=
 =bIbM
 -----END PGP PUBLIC KEY BLOCK-----
-`
+`;
 
 export const pubKey2File = `-----BEGIN PGP PUBLIC KEY BLOCK-----
 Comment: GPGTools - https://gpgtools.org
@@ -184,4 +184,4 @@ GUuf/UBfMsNa826wFjSRGEKw1fqFS3y7rCZmP9YB3lHQ/lmFwhnxolKRHLrpRHE7
 gfhig2TXhuO712Evh+cqnwowbWrkK4AZgImOKqvV0S04tZNEqlYGBsIUEA==
 =ClOh
 -----END PGP PUBLIC KEY BLOCK-----
-`
+`;

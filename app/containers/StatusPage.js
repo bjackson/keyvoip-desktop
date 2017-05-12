@@ -23,8 +23,8 @@ const openpgp = require('openpgp');
 
 require('events').EventEmitter.defaultMaxListeners = 20;
 
-var PORT = 42001;
-var NUM_NODES = 7;
+const PORT = 42001;
+const NUM_NODES = 7;
 
 // const NODE_IDs = [
 //   'f511e1445170b19d6f18a45bf434818856ac0a7f',
@@ -66,37 +66,15 @@ async function decryptString(key, data) {
 // }
 
 async function createTestNodeOnPort(id) {
-  const logger = new kad.Logger(1);
-  const contact = kad.contacts.AddressPortContact({
-    // address: '127.0.0.1',
-    address: '173.18.28.216',
-    port: id + PORT,
-  });
-  // Decorate your transport
-  const NatTransport = traverse.TransportDecorator(kad.transports.UDP);
-
-  const transport = new NatTransport(contact, {
-    traverse: {
-      upnp: { forward: PORT + id, ttl: 0 },
-      stun: {
-        server: {
-          address: 'stun.l.google.com',
-          port: 19302,
-        }
-      },
-     turn: {
-       server: {
-         address: '192.158.29.39', port: 3478
-       }
-     }
-    }
-  });
-
-  // const transport = kad.transports.UDP(contact);
+  const logger = new kad.Logger(4);
+  let transport = kad.transports.UDP(kad.contacts.AddressPortContact({
+    address: '127.0.0.1',
+    port: id + PORT
+  }));
 
   const storage = kad.storage.MemStore();
 
-  var node = new kad.Node({
+  const node = new kad.Node({
     logger,
     transport,
     storage,
@@ -104,7 +82,7 @@ async function createTestNodeOnPort(id) {
 
 
   console.log(node);
-  await sleep(500);
+  // await sleep(500);
   return node;
 }
 
@@ -115,7 +93,6 @@ function sleep(ms) {
 class StatusPage extends Component {
   constructor() {
     super();
-
   }
 
   async start() {
@@ -123,8 +100,8 @@ class StatusPage extends Component {
     // const nodes = await _.map(_.range(NUM_NODES), async (n) => { return await createTestNodeOnPort(n) });
     const nodes = [];
 
-    for (var i = 0; i < NUM_NODES; i++) {
-      let node = await createTestNodeOnPort(i);
+    for (let i = 0; i < NUM_NODES; i++) {
+      const node = await createTestNodeOnPort(i);
       nodes.push(node);
     }
     console.log(nodes);
@@ -133,68 +110,30 @@ class StatusPage extends Component {
     this.topics = topics;
 
 
-
-    for (var i = 1; i < NUM_NODES; i++) {
-      let seed2 = {
-          address: '127.0.0.1',
-          port: PORT + ((i + 1) % NUM_NODES),
+    for (let i = 0; i < NUM_NODES; i++) {
+      const seed2 = {
+        address: 'localhost',
+        port: PORT + ((i + 1) % NUM_NODES),
       };
-      let seed = {
-          address: 'brettjackson.org',
-          port: PORT,
-      };
+      // const seed = {
+      //   address: 'brettjackson.org',
+      //   port: PORT,
+      // };
 
 
       // nodes[i].connect(seed, err => console.err);
-      nodes[i].connect(seed2, err => console.err);
+      nodes[i].connect(seed2, console.err);
 
-      await sleep(500);
+      // await sleep(500);
     }
 
-    // nodes[1].connect({
-    //   address: '127.0.0.1',
-    //   port: 42001 + 6
-    // });
-    //
-    // nodes[6].connect({
-    //   address: '127.0.0.1',
-    //   port: 42001 + 1
-    // });
-
-    // setTimeout(async function () {
-    //   console.log('TIMEOUT 1');
-    //   topics[3].subscribe('node1Msg', async (data) => {
-    //     console.log('GOT MESSAGE');
-    //     const decryptedString = await decryptString(privKey1File, data);
-    //     console.log(decryptedString);
-    //   });
-    //
-    //   // nodes[3].put('node3k', 'node3v');
-    //
-    //
-    //   setTimeout(async function () {
-    //     const encryptedMessage = await encryptString(pubKey1File, 'hello node1 from node11!');
-    //     topics[11].publish('node1Msg', encryptedMessage);
-    //     console.log(nodes[11]);
-    //     console.log(nodes[3]);
-    //     // nodes[5].put('node5k', 'node5v');
-    //     // nodes[5].put('node3k', 'node3v2');
-    //   }, 3000);
-    // }, 1000);
-
-
-    await sleep(2500);
-    navigator.getUserMedia({ video: true, audio: true }, (stream) => this.gotMedia(stream, topics), function () {})
+    setTimeout(() => {
+      navigator.getUserMedia({ video: true, audio: true },
+        (stream) => this.gotMedia(stream, topics), () => {});
+    }, 9000);
   }
 
   gotMedia(stream, topics) {
-
-    const peer1 = new SimplePeer({ initiator: true, stream: stream });
-    const peer6 = new SimplePeer();
-
-    let signal1 = true;
-    let signal6 = true;
-
     let seq1 = 0;
     let seq6 = 0;
     let last1 = -1;
@@ -203,14 +142,17 @@ class StatusPage extends Component {
     let peer1pkts = [];
     let peer6pkts = [];
 
+    let peer1;
+    let peer6;
+
 
     this.topics[6].subscribe('node6RTC', async (data) => {
       console.log('GOT RTC MESSAGE 6');
       console.log(data);
 
-      if (data.seq == last6 + 1) {
+      if (data.seq === last6 + 1) {
         _.forEach(peer6pkts, pkt => {
-          if (pkt.seq == last6 + 1) {
+          if (pkt.seq === last6 + 1) {
             console.log(`PEER 6: Processing pkt: ${pkt.seq}`);
             peer6.signal(pkt.data);
             last6 = pkt.seq;
@@ -229,9 +171,9 @@ class StatusPage extends Component {
       console.log('GOT RTC MESSAGE 1');
       console.log(data);
 
-      if (data.seq == last1 + 1) {
+      if (data.seq === last1 + 1) {
         _.forEach(peer1pkts, pkt => {
-          if (pkt.seq == last1 + 1) {
+          if (pkt.seq === last1 + 1) {
             console.log(`PEER 1: Processing pkt: ${pkt.seq}`);
             peer1.signal(pkt.data);
             last1 = pkt.seq;
@@ -244,65 +186,69 @@ class StatusPage extends Component {
         peer1pkts.push(data);
         peer1pkts = _.sortBy(peer1pkts, n => n.seq);
       }
-
     });
 
-    peer1.on('signal',  (data) => {
-      // when peer1 has signaling data, give it to peer6 somehow
-      setTimeout(function () {
-        topics[1].publish('node6RTC', { data: data, time: new Date().toJSON(), seq: seq1 });
-        console.log('node6RTC', { data: data, time: new Date().toJSON(), seq: seq1 });
+    setTimeout(() => {
+      peer1 = new SimplePeer({ initiator: true, stream });
+      peer6 = new SimplePeer();
 
-        let curSeq1 = seq1;
+      peer1.on('signal', (data) => {
+        // when peer1 has signaling data, give it to peer6 somehow
+        setTimeout(() => {
+          topics[1].publish('node6RTC', { data, time: new Date().toJSON(), seq: seq1 });
+          console.log('node6RTC', { data, time: new Date().toJSON(), seq: seq1 });
 
-        setTimeout(function () {
-          topics[1].publish('node6RTC', { data: data, time: new Date().toJSON(), seq: curSeq1 });
-          console.log('node6RTC', { data: data, time: new Date().toJSON(), seq: curSeq1 });
-        }, 500);
+          const curSeq1 = seq1;
+
+          setTimeout(() => {
+            topics[1].publish('node6RTC', { data, time: new Date().toJSON(), seq: curSeq1 });
+            console.log('node6RTC', { data, time: new Date().toJSON(), seq: curSeq1 });
+          }, 100);
 
 
-        seq1++;
-      }, 1000);
-    });
+          seq1 += 1;
+        }, 0);
+      });
 
-    peer6.on('signal',  (data) => {
-      // when peer6 has signaling data, give it to peer1 somehow
-      setTimeout(function () {
-        topics[6].publish('node1RTC', { data: data, time: new Date().toJSON(), seq: seq6 });
-        console.log('node1RTC', { data: data, time: new Date().toJSON(), seq: seq6 });
+      peer6.on('signal', (data) => {
+        // when peer6 has signaling data, give it to peer1 somehow
+        setTimeout(() => {
+          topics[6].publish('node1RTC', { data, time: new Date().toJSON(), seq: seq6 });
+          console.log('node1RTC', { data, time: new Date().toJSON(), seq: seq6 });
 
-        let curSeq6 = seq6;
+          const curSeq6 = seq6;
 
-        setTimeout(function () {
-          topics[6].publish('node1RTC', { data: data, time: new Date().toJSON(), seq: curSeq6 });
-          console.log('node1RTC', { data: data, time: new Date().toJSON(), seq: curSeq6 });
-        }, 500);
+          setTimeout(() => {
+            topics[6].publish('node1RTC', { data, time: new Date().toJSON(), seq: curSeq6 });
+            console.log('node1RTC', { data, time: new Date().toJSON(), seq: curSeq6 });
+          }, 100);
 
-        seq6++;
-      }, 1000);
-    });
+          seq6 += 1;
+        }, 0);
+      });
 
-    peer1.on('connect',  () => {
-      // wait for 'connect' event before using the data channel
-      console.log('peer1 connected');
-    });
+      peer1.on('connect', () => {
+        // wait for 'connect' event before using the data channel
+        console.log('peer1 connected');
+      });
 
-    peer6.on('connect',  () => {
-      // wait for 'connect' event before using the data channel
-      console.log('peer6 connected');
-    });
+      peer6.on('connect', () => {
+        // wait for 'connect' event before using the data channel
+        console.log('peer6 connected');
+      });
 
-    peer6.on('data',  (data) => {
-      // got a data channel message
-      console.log('got a message from peer1: ' + data);
-    });
+      peer6.on('data', (data) => {
+        // got a data channel message
+        console.log(`got a message from peer1: ${data}`);
+      });
 
-    peer6.on('stream',  (stream) => {
-      // got remote video stream, now let's show it in a video tag
-      var video = document.getElementById('videoPl');
-      video.src = window.URL.createObjectURL(stream);
-      video.play();
-    });
+      peer6.on('stream', (stream2) => {
+        // got remote video stream, now let's show it in a video tag
+        const video = document.getElementById('videoPl');
+        video.src = window.URL.createObjectURL(stream2);
+        video.play();
+      });
+    }, 1000);
   }
 
   render() {
@@ -310,7 +256,7 @@ class StatusPage extends Component {
       <div>
         <h3>hi</h3>
         <button onClick={() => this.start()}>Start me up!</button>
-        <video id="videoPl"></video>
+        <video id="videoPl" />
       </div>
     );
   }
